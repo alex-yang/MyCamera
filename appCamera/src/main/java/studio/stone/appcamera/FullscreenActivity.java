@@ -7,6 +7,24 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
+import android.net.Uri;
+import android.os.Environment;
+import android.os.PowerManager;
+import android.util.Log;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.Toast;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -17,23 +35,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.media.MediaRecorder;
-import android.net.Uri;
-import android.os.Environment;
-import android.os.PowerManager;
-import android.util.Log;
-import android.view.MotionEvent;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
-import android.view.KeyEvent;
-import android.view.Window;
-import android.view.WindowManager;
-import android.widget.Toast;
 
 public class FullscreenActivity extends Activity implements SensorEventListener{
     public static final int MEDIA_TYPE_IMAGE = 1;
@@ -140,7 +141,10 @@ public class FullscreenActivity extends Activity implements SensorEventListener{
             }
             return true;
         } else if(keyCode==KeyEvent.KEYCODE_BACK){
-            stopRecord();
+            if(recording){
+                videoRecorder.interrupt();
+                videoRecorder=null;
+            }
             nm.cancel(LED_NOTIFICATION_ID);
             finish();
             return true;
@@ -250,12 +254,25 @@ public class FullscreenActivity extends Activity implements SensorEventListener{
             mCamera.unlock();
             mRecorder.setCamera(mCamera);
             mRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+            mRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
             mRecorder.setOrientationHint(getRotation());
-            mRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-            mRecorder.setVideoSize(1920, 1080);
-            mRecorder.setVideoEncodingBitRate(20000000);
-            mRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-            mRecorder.setVideoFrameRate(30);
+            //mRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            CamcorderProfile prof=CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
+            System.out.println("AudioBitRate="+prof.audioBitRate);
+            System.out.println("AudioSampleRate="+prof.audioSampleRate);
+            System.out.println("VideoBitRate="+prof.videoBitRate);
+            System.out.println("Quality="+prof.quality);
+            prof.audioBitRate=192000;
+            prof.audioChannels=2;
+            prof.videoBitRate=20000000;
+            prof.videoFrameHeight=1080;
+            prof.videoFrameWidth=1920;
+            prof.videoFrameRate=30;
+            mRecorder.setProfile(prof);
+            //mRecorder.setVideoSize(1920, 1080);
+            //mRecorder.setVideoEncodingBitRate(20000000);
+            //mRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+           // mRecorder.setVideoFrameRate(30);
             mRecorder.setPreviewDisplay(mHolder.getSurface());
             mCurrentVideoPath=getOutputMediaFile(MEDIA_TYPE_VIDEO).toString();
             mRecorder.setOutputFile(mCurrentVideoPath);
